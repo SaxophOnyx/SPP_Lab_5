@@ -54,6 +54,7 @@ namespace Tests
         [InlineData("{Name} {{Surname}, {Age}")]
         [InlineData("{Name}} {Surname}, {Age}")]
         [InlineData("}{Name} {Surname}, {Age}")]
+        [InlineData("{}")]
         public void Format_InvalidFormatException(string template)
         {
             //arrange
@@ -69,8 +70,10 @@ namespace Tests
             Assert.Throws<InvalidFormatException>(() => formatter.Format(template, person));
         }
 
-        [Fact]
-        public void Format_UnknownParamException()
+        [Theory]
+        [InlineData("{Name} {WrongSurname}, {Age}")]
+        [InlineData("{Na{me}} {Surname}, {Age}")]
+        public void Format_UnknownParamException(string template)
         {
             //arrange
             IStringFormatter formatter = new StringFormatter();
@@ -80,9 +83,6 @@ namespace Tests
                 Surname = "Hill",
                 Age = 54
             };
-
-            string template = "{Name} {WrongSurname}, {Age}";
-            string expected = $"{person.Name} {person.Surname}, {person.Age}";
 
             //act + assert
             Assert.Throws<UnknownParamException>(() => formatter.Format(template, person));

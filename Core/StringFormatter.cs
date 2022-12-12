@@ -23,10 +23,11 @@ namespace Core
         public string Format(string template, object target)
         {
             StringBuilder resBuilder = new();
-
-            int pos = 0;
-            int? paramNameStartIndex = null;
             int balance = 0;
+            int pos = 0;
+            int? nameStartPos = null;
+            char? prevChr = null;
+
             while (pos < template.Length)
             {
                 char chr = template[pos];
@@ -35,11 +36,14 @@ namespace Core
                 {
                     case '{':
                     {
-                        ++balance;
-                        if (balance == 2)
+                        if ((prevChr == '{') && (balance > 0))
                         {
-                            resBuilder.Append('{');
                             balance = 0;
+                            resBuilder.Append('{');
+                        }
+                        else
+                        {
+                            ++balance;
                         }
 
                         break;
@@ -47,18 +51,32 @@ namespace Core
 
                     case '}':
                     {
+                        if (prevChr == '{')
+                            throw new InvalidFormatException();
+
                         --balance;
+
                         if (balance == -2)
                         {
-                            resBuilder.Append('}');
-                            balance = 0;
+                            if (prevChr == '}')
+                            {
+                                balance = 0;
+                                resBuilder.Append('}');
+                            }
+                            else
+                            {
+                                throw new InvalidFormatException();
+                            }
                         }
-                        else if (balance == 0)
+                        else
                         {
-                            string paramName = template.Substring((int)paramNameStartIndex, pos - (int)paramNameStartIndex);
-                            paramNameStartIndex = null;
-                            var obj = accessorCash.AddOrUse(target, paramName);
-                            resBuilder.Append(obj.ToString());
+                            if (balance == 0)
+                            {
+                                string paramName = template.Substring((int)nameStartPos, pos - (int)nameStartPos);
+                                nameStartPos = null;
+                                var obj = accessorCash.AddOrUse(target, paramName);
+                                resBuilder.Append(obj.ToString());
+                            }
                         }
 
                         break;
@@ -66,18 +84,19 @@ namespace Core
 
                     default:
                     {
-                        if (paramNameStartIndex == null)
+                        if (nameStartPos == null)
                         {
                             if (balance == 0)
                                 resBuilder.Append(chr);
                             else
-                                paramNameStartIndex = pos;
+                                nameStartPos = pos;
                         }
 
                         break;
                     }
                 }
 
+                prevChr = chr;
                 ++pos;
             }
 
